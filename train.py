@@ -53,20 +53,21 @@ if __name__ == "__main__":
     Y_train = np.array(Y_train)
 
     # Building model
-    num_units = 75
-    dropout_val = 0.1
+    dropout_val = 0.15
     model = Sequential()
-    model.add(LSTM(units=num_units,return_sequences=True,input_shape=(X_train.shape[1], 1)))
+    model.add(LSTM(units=128,return_sequences=True,input_shape=(X_train.shape[1], 1)))
     model.add(Dropout(dropout_val))
-    model.add(LSTM(units=num_units,return_sequences=True))
+    model.add(LSTM(units=64,return_sequences=True))
     model.add(Dropout(dropout_val))
-    model.add(LSTM(units=num_units,return_sequences=True))
+    model.add(LSTM(units=32,return_sequences=True))
     model.add(Dropout(dropout_val))
-    model.add(LSTM(units=num_units))
+    model.add(LSTM(units=16, return_sequences=True))
+    model.add(Dropout(dropout_val))
+    model.add(LSTM(units=8))
     model.add(Dropout(dropout_val))
     model.add(Dense(units=1))
     model.compile(optimizer='adam',loss='mean_squared_error')
-    model.fit(X_train,Y_train,epochs=100,batch_size=8)
+    model.fit(X_train,Y_train,epochs=100,batch_size=4)
 
     # Testing the model
     test_dataset = pd.concat((train_set['Open'], test_set['Open']), axis=0)
@@ -100,13 +101,21 @@ if __name__ == "__main__":
         predictUp = final_predictions[i+1] - final_predictions[i] >= 0
         if actualUp == predictUp:
             totalAccurateTrends += 1
-    print(totalAccurateTrends)
-    print("Trend Accuracy: {accuracy:.2f}%\n".format(accuracy=(totalAccurateTrends / (len(dataset) - 1) * 100)))
+    print("Trend Accuracy (all data): {accuracy:.2f}%\n".format(accuracy=(totalAccurateTrends / (len(dataset) - 1) * 100)))
+
+    # Calculating Trend Accuracy in only the testing data (as the model was tested with all data points)
+    testingAccurateTrends = 0
+    for i in range(num_rows_training, len(dataset) - 1, 1):
+        actualUp = actual_values[i + 1] - actual_values[i] >= 0
+        predictUp = final_predictions[i+1] - final_predictions[i] >= 0
+        if actualUp == predictUp:
+            testingAccurateTrends += 1
+    print("Testing Accuracy: {accuracy:.2f}%\n".format(accuracy=(testingAccurateTrends / (len(dataset) - num_rows_training - 1) * 100)))
 
     # Calculating Ending Price Accuracy
     actualFinal = actual_values[len(actual_values) - 1]
-    predictedFinal = final_predictions[len(final_predictions) - 1]
-    print("Final Price Accuracy: ${price:.2f}\n").format(price=(actualFinal - predictedFinal) / actualFinal * 100)
+    predictedFinal = final_predictions[len(final_predictions) - 1][0]
+    print("Final Price Accuracy: {accuracy:.2f}%\n".format(accuracy=(100 - (abs(predictedFinal - actualFinal)) / actualFinal * 100)))
     
     # Displaying results
     x_axis = [i for i in range(1, len(dataset) + 1)]
