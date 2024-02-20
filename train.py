@@ -10,6 +10,7 @@ from keras.layers import LSTM
 from keras.layers import Dropout
 from keras.layers import Dense
 
+trained_models = []
 
 if __name__ == "__main__":
     reader = open('apple_data.csv', 'r')
@@ -101,6 +102,11 @@ if __name__ == "__main__":
             totalAccurateTrends += 1
     print(totalAccurateTrends)
     print("Trend Accuracy: {accuracy:.2f}%\n".format(accuracy=(totalAccurateTrends / (len(dataset) - 1) * 100)))
+
+    # Calculating Ending Price Accuracy
+    actualFinal = actual_values[len(actual_values) - 1]
+    predictedFinal = final_predictions[len(final_predictions) - 1]
+    print("Final Price Accuracy: ${price:.2f}\n").format(price=(actualFinal - predictedFinal) / actualFinal * 100)
     
     # Displaying results
     x_axis = [i for i in range(1, len(dataset) + 1)]
