@@ -60,7 +60,7 @@ if __name__ == "__main__":
     X_train = []
     Y_train = []
     for i,j in train_set_scaled.iterrows():
-        X_train.append([len(dataset) - i, j['Open']])
+        X_train.append([j['Open'], j['Volume']])
         Y_train.append(j['Close'])
 
     X_train = np.array(X_train)
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     
     if 'AAPL' not in trained_models:
         # Building model
-        unit_size = 75
+        unit_size = 120
         dropout_val = 0.10
         model = Sequential()
         model.add(LSTM(units=unit_size,return_sequences=True,input_shape=(X_train.shape[1], 1)))
@@ -84,42 +84,47 @@ if __name__ == "__main__":
         model.add(LSTM(units=unit_size))
         model.add(Dropout(dropout_val))
         model.add(Dense(units=1))
-        model.compile(optimizer='adam',loss='mean_squared_error')
-        model.fit(X_train,Y_train,epochs=100,batch_size=16)
+        model.compile(optimizer='adam',loss='mean_absolute_error')
+        model.fit(X_train,Y_train,epochs=100,batch_size=8)
         trained_models['AAPL'] = model
     
     trained_model = trained_models['AAPL']
 
     # Testing the model
-    test_dataset = pd.concat((train_set['Open'], test_set['Open']), axis=0)
+    test_dataset = pd.concat((train_set, test_set), axis=0)
+    test_dataset.drop(columns=['Date', 'Close'])
     inputs = []
-    idx = 1
+
 
     # Normalize testing data
-    max_test_val = test_dataset.max()
-    min_test_val = test_dataset.min()
-    for val in test_dataset:
-        inputs.append([idx, (val - min_test_val) / (max_test_val - min_test_val)])
-        idx += 1
+    max_test_val = test_dataset['Open'].max()
+    min_test_val = test_dataset['Open'].min()
+    max_test_volume = test_dataset['Volume'].max()
+    min_test_volume = test_dataset['Volume'].min()
+    for i, val in test_dataset.iterrows():
+        inputs.append([(val['Open'] - min_test_val) / (max_test_val - min_test_val), (val['Volume'] - min_test_volume) / (max_test_volume - min_test_volume)])
     inputs = np.array(inputs)
     inputs = np.reshape(inputs, (inputs.shape[0], inputs.shape[1], 1))
 
     testing_results = trained_model(inputs)
     testing_results = testing_results.numpy()
     testing_results = np.array(testing_results)
+    print(testing_results)
 
     actual_values = dataset['Close'].tolist()
     final_predictions = []
+    max_close = dataset['Close'].max()
+    min_close = dataset['Close'].min()
     # Reverting back to original scale prices
     for val in testing_results:
-        final_predictions.append(val * max_test_val)
+        final_predictions.append(val * (max_close - min_close) + min_close)
 
 
     # Calculating Model Accuracy - does the prediction model correctly predict relative up/down patterns?
     totalAccurateTrends = 0
     for i in range(len(dataset) - 1):
-        actualUp = actual_values[i + 1] - actual_values[i] >= 0
-        predictUp = final_predictions[i+1] - final_predictions[i] >= 0
+        actualUp = (actual_values[i + 1] - actual_values[i]) > 0
+        predictUp = (final_predictions[i+1] - final_predictions[i]) > 0
         if actualUp == predictUp:
             totalAccurateTrends += 1
     print("Trend Accuracy (all data): {accuracy:.2f}%\n".format(accuracy=(totalAccurateTrends / (len(dataset) - 1) * 100)))
@@ -127,8 +132,8 @@ if __name__ == "__main__":
     # Calculating Trend Accuracy in only the testing data (as the model was tested with all data points)
     testingAccurateTrends = 0
     for i in range(num_rows_training, len(dataset) - 1, 1):
-        actualUp = actual_values[i + 1] - actual_values[i] >= 0
-        predictUp = final_predictions[i+1] - final_predictions[i] > 0
+        actualUp = (actual_values[i + 1] - actual_values[i]) > 0
+        predictUp = (final_predictions[i+1] - final_predictions[i]) > 0
         if actualUp == predictUp:
             testingAccurateTrends += 1
     print("Testing Accuracy: {accuracy:.2f}%\n".format(accuracy=(testingAccurateTrends / (len(dataset) - num_rows_training - 1) * 100)))
@@ -143,7 +148,7 @@ if __name__ == "__main__":
     plt.plot(x_axis, actual_values, label='Actual Stock Price')
     plt.plot(final_predictions, label='Predicted Price')
     plt.title("Apple Stock Price Prediction")
-    plt.xlabel("Days since {date:s}".format(date=dataset['Date'][0]))
+    plt.xlabel("Days since {date:s}".format(date=dataset['Date'][len(dataset) - 1]))
     plt.ylabel("Stock Price (USD)")
     plt.legend()
 
