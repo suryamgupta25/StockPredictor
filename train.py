@@ -28,7 +28,8 @@ def on_move(event):
 """
 
 if __name__ == "__main__":
-    data = pd.read_csv('AAPL.csv')
+    fileName = 'AAPL.csv'
+    data = pd.read_csv(fileName)
 
     dataset = data[['Date', 'Open', 'Close/Last', 'Volume']]
     # Convert date strings to Datetime
@@ -95,7 +96,6 @@ if __name__ == "__main__":
     test_dataset.drop(columns=['Date', 'Close'])
     inputs = []
 
-
     # Normalize testing data
     max_test_val = test_dataset['Open'].max()
     min_test_val = test_dataset['Open'].min()
@@ -119,10 +119,13 @@ if __name__ == "__main__":
     for val in testing_results:
         final_predictions.append(val * (max_close - min_close) + min_close)
 
+    # Predicted closing price for 11/13 should be matched with the opening price for 11/14, not with the opening price for 11/13. 
+    # Therefore, we need to shift the final_predictions list by 1 day to the left
+    del final_predictions[0]
 
     # Calculating Model Accuracy - does the prediction model correctly predict relative up/down patterns?
     totalAccurateTrends = 0
-    for i in range(len(dataset) - 1):
+    for i in range(len(dataset) - 2):
         actualUp = (actual_values[i + 1] - actual_values[i]) > 0
         predictUp = (final_predictions[i+1] - final_predictions[i]) > 0
         if actualUp == predictUp:
@@ -131,7 +134,7 @@ if __name__ == "__main__":
 
     # Calculating Trend Accuracy in only the testing data (as the model was tested with all data points)
     testingAccurateTrends = 0
-    for i in range(num_rows_training, len(dataset) - 1, 1):
+    for i in range(num_rows_training - 1, len(dataset) - 2, 1):
         actualUp = (actual_values[i + 1] - actual_values[i]) > 0
         predictUp = (final_predictions[i+1] - final_predictions[i]) > 0
         if actualUp == predictUp:
@@ -144,11 +147,13 @@ if __name__ == "__main__":
     print("Final Price Accuracy: {accuracy:.2f}%\n".format(accuracy=(100 - (abs(predictedFinal - actualFinal)) / actualFinal * 100)))
     
     # Displaying results
-    x_axis = [i for i in range(1, len(dataset) + 1)]
+    x_axis = [i for i in range(0, len(dataset))]
     plt.plot(x_axis, actual_values, label='Actual Stock Price')
-    plt.plot(final_predictions, label='Predicted Price')
+    plt.plot([i for i in range(num_rows_training - 1)], [final_predictions[i][0] for i in range(num_rows_training - 1)], label='Predicted Price (training dataset)', color='orange')
+    plt.plot([i for i in range(num_rows_training - 1, len(dataset) - 1)], [final_predictions[i][0] for i in range(num_rows_training - 1, len(dataset) - 1)], label='Predicted Price (testing dataset)', color='green')
+    plt.plot() 
     plt.title("Apple Stock Price Prediction")
-    plt.xlabel("Days since {date:s}".format(date=dataset['Date'][len(dataset) - 1]))
+    plt.xlabel("Trading Days since {date:s}".format(date=dataset['Date'][len(dataset) - 1]))
     plt.ylabel("Stock Price (USD)")
     plt.legend()
 
