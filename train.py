@@ -28,7 +28,7 @@ def on_move(event):
 """
 
 if __name__ == "__main__":
-    fileName = 'AAPL.csv'
+    fileName = 'MRNA.csv'
     data = pd.read_csv(fileName)
 
     dataset = data[['Date', 'Open', 'Close/Last', 'Volume']]
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     plt.plot([i for i in range(num_rows_training - 1)], [final_predictions[i][0] for i in range(num_rows_training - 1)], label='Predicted Price (training dataset)', color='orange')
     plt.plot([i for i in range(num_rows_training - 1, len(dataset) - 1)], [final_predictions[i][0] for i in range(num_rows_training - 1, len(dataset) - 1)], label='Predicted Price (testing dataset)', color='green')
     plt.plot() 
-    plt.title("Apple Stock Price Prediction")
+    plt.title("Moderna Stock Price Prediction")
     plt.xlabel("Trading Days since {date:s}".format(date=dataset['Date'][len(dataset) - 1]))
     plt.ylabel("Stock Price (USD)")
     plt.legend()
